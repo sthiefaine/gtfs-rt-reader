@@ -52,7 +52,9 @@ export default function MockPage() {
     headerText: "",
     descriptionText: "",
     cause: "" as string | number,
-    effect: "" as string | number
+    effect: "" as string | number,
+    startDate: "",
+    endDate: ""
   });
 
   const parsed = useFeedStore(useShallow((s) => s.parsed));
@@ -107,7 +109,7 @@ export default function MockPage() {
     }
   };
 
-  const handleUpdateAlert = (entityId: string, field: "cause" | "effect" | "headerText" | "descriptionText", value: number | string | null) => {
+  const handleUpdateAlert = (entityId: string, field: "cause" | "effect" | "headerText" | "descriptionText" | "startDate" | "endDate", value: number | string | null) => {
     setModifiedEntities((prev) =>
       prev.map((entity) => {
         if (entity.id === entityId && entity.alert) {
@@ -121,6 +123,29 @@ export default function MockPage() {
                       translation: [{ text: String(value) }]
                     }
                   : undefined
+              }
+            };
+          } else if (field === "startDate" || field === "endDate") {
+            // Convertir la date en timestamp Unix (secondes)
+            const timestamp = value && typeof value === "string" && value.trim() 
+              ? Math.floor(new Date(value).getTime() / 1000)
+              : undefined;
+            
+            const activePeriod = entity.alert.activePeriod?.[0] || {};
+            const updatedPeriod = {
+              ...activePeriod,
+              [field === "startDate" ? "start" : "end"]: timestamp
+            };
+            
+            // Si les deux dates sont vides, supprimer activePeriod
+            const hasStart = updatedPeriod.start != null;
+            const hasEnd = updatedPeriod.end != null;
+            
+            return {
+              ...entity,
+              alert: {
+                ...entity.alert,
+                activePeriod: (hasStart || hasEnd) ? [updatedPeriod] : undefined
               }
             };
           } else {
@@ -148,6 +173,21 @@ export default function MockPage() {
       return;
     }
 
+    // Convertir les dates en timestamps Unix (secondes)
+    const startTimestamp = newAlert.startDate && newAlert.startDate.trim()
+      ? Math.floor(new Date(newAlert.startDate).getTime() / 1000)
+      : undefined;
+    const endTimestamp = newAlert.endDate && newAlert.endDate.trim()
+      ? Math.floor(new Date(newAlert.endDate).getTime() / 1000)
+      : undefined;
+
+    const activePeriod = (startTimestamp != null || endTimestamp != null)
+      ? [{
+          start: startTimestamp,
+          end: endTimestamp
+        }]
+      : undefined;
+
     const alertEntity: gtfs.IFeedEntity = {
       id: newAlert.id.trim() || `alert:${Date.now()}`,
       alert: {
@@ -160,7 +200,8 @@ export default function MockPage() {
             }
           : undefined,
         cause: newAlert.cause ? Number(newAlert.cause) : undefined,
-        effect: newAlert.effect ? Number(newAlert.effect) : undefined
+        effect: newAlert.effect ? Number(newAlert.effect) : undefined,
+        activePeriod
       }
     };
 
@@ -170,7 +211,9 @@ export default function MockPage() {
       headerText: "",
       descriptionText: "",
       cause: "",
-      effect: ""
+      effect: "",
+      startDate: "",
+      endDate: ""
     });
     setShowCreateForm(false);
   };
@@ -238,7 +281,7 @@ export default function MockPage() {
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://app.pysae.com/api/v2/groups/moulins/gtfs-rt"
+                placeholder="URL du flux"
                 className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-white placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
               />
               <button
@@ -408,6 +451,28 @@ export default function MockPage() {
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-cyan-200/70">Date de début (optionnel)</label>
+                <input
+                  type="datetime-local"
+                  value={newAlert.startDate}
+                  onChange={(e) => setNewAlert({ ...newAlert, startDate: e.target.value })}
+                  className="rounded-lg border border-cyan-600/50 bg-cyan-900/30 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                <label className="text-xs text-cyan-200/70">Date de fin (optionnel)</label>
+                <input
+                  type="datetime-local"
+                  value={newAlert.endDate}
+                  onChange={(e) => setNewAlert({ ...newAlert, endDate: e.target.value })}
+                  className="rounded-lg border border-cyan-600/50 bg-cyan-900/30 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => {
@@ -417,7 +482,9 @@ export default function MockPage() {
                     headerText: "",
                     descriptionText: "",
                     cause: "",
-                    effect: ""
+                    effect: "",
+                    startDate: "",
+                    endDate: ""
                   });
                 }}
                 className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-600 transition"
@@ -442,6 +509,24 @@ export default function MockPage() {
 
           const header = alert.headerText?.translation?.[0]?.text ?? "Alerte sans titre";
           const desc = alert.descriptionText?.translation?.[0]?.text;
+          
+          // Convertir les timestamps en format datetime-local
+          const activePeriod = alert.activePeriod?.[0];
+          const getTimestamp = (value: number | Long | null | undefined): number => {
+            if (value == null) return 0;
+            if (typeof value === "object" && typeof value.toNumber === "function") {
+              return value.toNumber();
+            }
+            return Number(value);
+          };
+          const startTimestamp = activePeriod?.start ? getTimestamp(activePeriod.start) : 0;
+          const endTimestamp = activePeriod?.end ? getTimestamp(activePeriod.end) : 0;
+          const startDate = startTimestamp > 0
+            ? new Date(startTimestamp * 1000).toISOString().slice(0, 16)
+            : "";
+          const endDate = endTimestamp > 0
+            ? new Date(endTimestamp * 1000).toISOString().slice(0, 16)
+            : "";
 
           return (
             <div key={entity.id} className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
@@ -469,7 +554,7 @@ export default function MockPage() {
                     />
                   </div>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4 mb-3">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs text-amber-200/70">Cause</label>
                       <select
@@ -504,6 +589,28 @@ export default function MockPage() {
                           </option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4">
+                    <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                      <label className="text-xs text-amber-200/70">Date de début (optionnel)</label>
+                      <input
+                        type="datetime-local"
+                        value={startDate}
+                        onChange={(e) => handleUpdateAlert(entity.id, "startDate", e.target.value || null)}
+                        className="rounded-lg border border-amber-600/50 bg-amber-900/30 px-3 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                      <label className="text-xs text-amber-200/70">Date de fin (optionnel)</label>
+                      <input
+                        type="datetime-local"
+                        value={endDate}
+                        onChange={(e) => handleUpdateAlert(entity.id, "endDate", e.target.value || null)}
+                        className="rounded-lg border border-amber-600/50 bg-amber-900/30 px-3 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+                      />
                     </div>
                   </div>
                 </div>
