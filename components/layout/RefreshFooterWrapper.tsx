@@ -1,15 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useFeedStore } from "@/app/store/feedStore";
 import { useShallow } from "zustand/react/shallow";
 import { RefreshFooter } from "@/components/ui/RefreshHeader";
 
 export const RefreshFooterWrapper = () => {
+  const pathname = usePathname();
   const [refreshInterval, setRefreshInterval] = useState(60000); // 1min par défaut
   const [timeUntilRefresh, setTimeUntilRefresh] = useState(60);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Désactiver le refresh automatique sur la page mock pour éviter d'écraser les modifications
+  const isMockPage = pathname === "/mock";
 
   const [source, setLoading, setError, setFromBuffer] = useFeedStore(
     useShallow((s) => [s.source, s.setLoading, s.setError, s.setFromBuffer])
@@ -49,7 +54,8 @@ export const RefreshFooterWrapper = () => {
 
     const urlSource = source?.type === "url" ? source.url : null;
     const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
-    const isRefreshEnabled = refreshInterval > 0 && urlSource && isOnline;
+    // Désactiver le refresh sur la page mock pour éviter d'écraser les modifications
+    const isRefreshEnabled = !isMockPage && refreshInterval > 0 && urlSource && isOnline;
 
     if (!isRefreshEnabled) {
       setTimeUntilRefresh(0);

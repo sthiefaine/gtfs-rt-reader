@@ -35,6 +35,13 @@ const EFFECT_OPTIONS = [
   { value: 11, label: "Problème Accessibilité" }
 ];
 
+const SEVERITY_OPTIONS = [
+  { value: gtfs.Alert.SeverityLevel.UNKNOWN_SEVERITY, label: "Sévérité inconnue" },
+  { value: gtfs.Alert.SeverityLevel.INFO, label: "Info" },
+  { value: gtfs.Alert.SeverityLevel.WARNING, label: "Avertissement" },
+  { value: gtfs.Alert.SeverityLevel.SEVERE, label: "Grave" }
+];
+
 function generateMockId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
@@ -47,6 +54,7 @@ export default function MockPage() {
   const [originalParsed, setOriginalParsed] = useState<ParsedFeed | undefined>(undefined);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mockId, setMockId] = useState<string>("");
+  const [showScope, setShowScope] = useState<Record<string, boolean>>({});
   const [newAlert, setNewAlert] = useState({
     id: `alert:${Date.now()}`,
     headerText: "",
@@ -109,7 +117,7 @@ export default function MockPage() {
     }
   };
 
-  const handleUpdateAlert = (entityId: string, field: "cause" | "effect" | "headerText" | "descriptionText" | "startDate" | "endDate", value: number | string | null) => {
+  const handleUpdateAlert = (entityId: string, field: "cause" | "effect" | "headerText" | "descriptionText" | "startDate" | "endDate" | "url" | "headerUrl" | "descriptionUrl" | "severityLevel", value: number | string | null) => {
     setModifiedEntities((prev) =>
       prev.map((entity) => {
         if (entity.id === entityId && entity.alert) {
@@ -148,6 +156,18 @@ export default function MockPage() {
                 activePeriod: (hasStart || hasEnd) ? [updatedPeriod] : undefined
               }
             };
+          } else if (field === "url" || field === "headerUrl" || field === "descriptionUrl") {
+            return {
+              ...entity,
+              alert: {
+                ...entity.alert,
+                [field]: value && typeof value === "string" && value.trim()
+                  ? {
+                      translation: [{ text: value.trim() }]
+                    }
+                  : undefined
+              }
+            };
           } else {
             return {
               ...entity,
@@ -165,6 +185,91 @@ export default function MockPage() {
 
   const handleDeleteAlert = (entityId: string) => {
     setModifiedEntities((prev) => prev.filter((entity) => entity.id !== entityId));
+  };
+
+  const handleUpdateInformedEntity = (entityId: string, index: number, field: "routeId" | "stopId" | "agencyId" | "tripRouteId" | "tripId" | "tripDirectionId", value: string | null) => {
+    setModifiedEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id === entityId && entity.alert) {
+          const informedEntities = [...(entity.alert.informedEntity || [])];
+          if (!informedEntities[index]) {
+            informedEntities[index] = {};
+          }
+          
+          const updatedEntity: any = { ...informedEntities[index] };
+          
+          if (field === "tripRouteId" || field === "tripId" || field === "tripDirectionId") {
+            const tripField = field === "tripRouteId" ? "routeId" : field === "tripId" ? "tripId" : "directionId";
+            updatedEntity.trip = {
+              ...(updatedEntity.trip || {}),
+              [tripField]: value || undefined
+            };
+            if (!updatedEntity.trip.routeId && !updatedEntity.trip.tripId && updatedEntity.trip.directionId == null) {
+              delete updatedEntity.trip;
+            }
+          } else {
+            // TypeScript ne peut pas inférer correctement les types pour informedEntity
+            (updatedEntity as any)[field] = value || undefined;
+            if (!value) {
+              delete (updatedEntity as any)[field];
+            }
+          }
+          
+          informedEntities[index] = updatedEntity;
+          
+          // Supprimer les entités vides
+          const filteredEntities = informedEntities.filter((e: any) => 
+            e.routeId || e.stopId || e.agencyId || e.trip?.routeId || e.trip?.tripId
+          );
+          
+          return {
+            ...entity,
+            alert: {
+              ...entity.alert,
+              informedEntity: filteredEntities.length > 0 ? filteredEntities : undefined
+            }
+          };
+        }
+        return entity;
+      })
+    );
+  };
+
+  const handleAddInformedEntity = (entityId: string) => {
+    setModifiedEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id === entityId && entity.alert) {
+          const informedEntities = [...(entity.alert.informedEntity || []), {}];
+          return {
+            ...entity,
+            alert: {
+              ...entity.alert,
+              informedEntity: informedEntities
+            }
+          };
+        }
+        return entity;
+      })
+    );
+  };
+
+  const handleRemoveInformedEntity = (entityId: string, index: number) => {
+    setModifiedEntities((prev) =>
+      prev.map((entity) => {
+        if (entity.id === entityId && entity.alert) {
+          const informedEntities = [...(entity.alert.informedEntity || [])];
+          informedEntities.splice(index, 1);
+          return {
+            ...entity,
+            alert: {
+              ...entity.alert,
+              informedEntity: informedEntities.length > 0 ? informedEntities : undefined
+            }
+          };
+        }
+        return entity;
+      })
+    );
   };
 
   const handleCreateAlert = () => {
@@ -507,6 +612,9 @@ export default function MockPage() {
           const alert = entity.alert;
           if (!alert) return null;
 
+          const scopeKey = entity.id || `alert-${Date.now()}`;
+          const isScopeVisible = showScope[scopeKey] ?? false;
+
           const header = alert.headerText?.translation?.[0]?.text ?? "Alerte sans titre";
           const desc = alert.descriptionText?.translation?.[0]?.text;
           
@@ -592,7 +700,7 @@ export default function MockPage() {
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4 mb-3">
                     <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
                       <label className="text-xs text-amber-200/70">Date de début (optionnel)</label>
                       <input
@@ -612,6 +720,125 @@ export default function MockPage() {
                         className="rounded-lg border border-amber-600/50 bg-amber-900/30 px-3 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 mb-3">
+                    <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                      <label className="text-xs text-amber-200/70">URL (optionnel)</label>
+                      <input
+                        type="url"
+                        value={alert.url?.translation?.[0]?.text || ""}
+                        onChange={(e) => handleUpdateAlert(entity.id, "url", e.target.value || null)}
+                        placeholder="https://..."
+                        className="rounded-lg border border-amber-600/50 bg-amber-900/30 px-3 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
+                      <label className="text-xs text-amber-200/70">
+                        Niveau de sévérité
+                        <span className="ml-1 text-amber-400/60 text-[10px]">(expérimental)</span>
+                      </label>
+                      <select
+                        value={alert.severityLevel ?? ""}
+                        onChange={(e) => handleUpdateAlert(entity.id, "severityLevel", e.target.value ? Number(e.target.value) : null)}
+                        className="rounded-lg border border-amber-600/50 bg-amber-900/30 px-3 py-1.5 text-sm text-white focus:border-amber-500 focus:outline-none"
+                      >
+                        <option value="">—</option>
+                        {SEVERITY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowScope({ ...showScope, [scopeKey]: !isScopeVisible })}
+                        className="flex items-center gap-2 text-xs text-amber-200/70 hover:text-amber-200 transition"
+                      >
+                        <span>{isScopeVisible ? "▼" : "▶"}</span>
+                        <label className="cursor-pointer">Portée (informedEntity)</label>
+                        {alert.informedEntity && alert.informedEntity.length > 0 && (
+                          <span className="rounded-full bg-amber-600/30 px-2 py-0.5 text-xs">
+                            {alert.informedEntity.length}
+                          </span>
+                        )}
+                      </button>
+                      {isScopeVisible && (
+                        <button
+                          type="button"
+                          onClick={() => handleAddInformedEntity(entity.id)}
+                          className="text-xs text-amber-300 hover:text-amber-200 underline"
+                        >
+                          + Ajouter une entité
+                        </button>
+                      )}
+                    </div>
+                    {isScopeVisible && (
+                      <div className="space-y-2">
+                      {(alert.informedEntity || []).map((ie, idx) => (
+                        <div key={idx} className="flex flex-wrap gap-2 p-2 rounded-lg border border-amber-600/30 bg-amber-900/20">
+                          <input
+                            type="text"
+                            placeholder="Route ID"
+                            value={ie.routeId || ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "routeId", e.target.value || null)}
+                            className="flex-1 min-w-[120px] rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Stop ID"
+                            value={ie.stopId || ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "stopId", e.target.value || null)}
+                            className="flex-1 min-w-[120px] rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Agency ID"
+                            value={ie.agencyId || ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "agencyId", e.target.value || null)}
+                            className="flex-1 min-w-[120px] rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Trip Route ID"
+                            value={ie.trip?.routeId || ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "tripRouteId", e.target.value || null)}
+                            className="flex-1 min-w-[120px] rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Trip ID"
+                            value={ie.trip?.tripId || ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "tripId", e.target.value || null)}
+                            className="flex-1 min-w-[120px] rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Direction"
+                            value={ie.trip?.directionId ?? ""}
+                            onChange={(e) => handleUpdateInformedEntity(entity.id, idx, "tripDirectionId", e.target.value || null)}
+                            className="w-20 rounded border border-amber-600/50 bg-amber-900/30 px-2 py-1 text-xs text-white placeholder:text-amber-500/50 focus:border-amber-500 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveInformedEntity(entity.id, idx)}
+                            className="rounded bg-red-600/80 px-2 py-1 text-xs text-white hover:bg-red-600 transition"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                        {(!alert.informedEntity || alert.informedEntity.length === 0) && (
+                          <p className="text-xs text-amber-300/60 italic">Aucune portée définie (alerte globale)</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
