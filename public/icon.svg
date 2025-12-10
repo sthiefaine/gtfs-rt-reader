@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Fond -->
+  <rect width="512" height="512" rx="80" fill="#0f172a"/>
+  
+  <!-- Cercle extérieur de la loupe -->
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#06b6d4" stroke-width="16"/>
+  
+  <!-- Poignée de la loupe -->
+  <path d="M 340 340 L 420 420" stroke="#06b6d4" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Contenu de la loupe - Bus GTFS -->
+  <g transform="translate(256, 220)">
+    <!-- Corps du bus -->
+    <rect x="-100" y="-40" width="200" height="80" rx="12" fill="#06b6d4"/>
+    
+    <!-- Fenêtres avant -->
+    <rect x="-90" y="-30" width="40" height="25" rx="4" fill="#0f172a"/>
+    <rect x="-40" y="-30" width="40" height="25" rx="4" fill="#0f172a"/>
+    <rect x="10" y="-30" width="40" height="25" rx="4" fill="#0f172a"/>
+    <rect x="60" y="-30" width="30" height="25" rx="4" fill="#0f172a"/>
+    
+    <!-- Porte -->
+    <rect x="20" y="10" width="30" height="30" rx="4" fill="#0f172a"/>
+    
+    <!-- Roues -->
+    <circle cx="-60" cy="50" r="18" fill="#0f172a"/>
+    <circle cx="60" cy="50" r="18" fill="#0f172a"/>
+    
+    <!-- Texte GTFS -->
+    <text x="0" y="25" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="2">GTFS</text>
+  </g>
+  
+  <!-- Petits détails de transport -->
+  <circle cx="180" cy="180" r="8" fill="#06b6d4" opacity="0.6"/>
+  <circle cx="332" cy="180" r="8" fill="#06b6d4" opacity="0.6"/>
+</svg>

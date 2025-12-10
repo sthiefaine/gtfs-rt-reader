@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply min-h-screen bg-[#0b1220] text-slate-100;
+  background: radial-gradient(circle at 20% 20%, #0f172a, #0b1220 40%),
+    radial-gradient(circle at 80% 0%, #0b3b4f, #0b1220 30%),
+    #0b1220;
+}
+
+a {
+  @apply text-inherit no-underline;
+}
+
+.maplibregl-popup-content {
+  @apply bg-slate-900 text-white;
+}
+
+.maplibregl-popup-tip {
+  @apply border-t-slate-900;
+}
+

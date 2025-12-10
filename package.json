@@ -1,0 +1,29 @@
+{
+  "name": "gtfs-rt-reader",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3005",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "gtfs-realtime-bindings": "^1.1.1",
+    "maplibre-gl": "^5.14.0",
+    "next": "^16.0.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/maplibre-gl": "^1.13.2",
+    "@types/node": "^20.12.7",
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.15",
+    "typescript": "^5.6.2"
+  }
+}
