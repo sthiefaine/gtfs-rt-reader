@@ -15,7 +15,13 @@ const formatDateTime = (timestamp?: number) =>
       }).format(new Date(timestamp))
     : "—";
 
-const toMs = (value: number) => Number(value) * 1000;
+const toMs = (value: number | { toNumber(): number } | null | undefined) => {
+  if (value == null) return 0;
+  if (typeof value === "object" && typeof value.toNumber === "function") {
+    return value.toNumber() * 1000;
+  }
+  return Number(value) * 1000;
+};
 
 type TripItemProps = {
   item: gtfs.IFeedEntity;

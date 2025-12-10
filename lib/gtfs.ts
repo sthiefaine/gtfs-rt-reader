@@ -33,7 +33,7 @@ export function parseGtfsRt(buffer: ArrayBuffer): ParsedFeed {
   return {
     header: {
       gtfsVersion: decoded.header.gtfsRealtimeVersion ?? undefined,
-      incrementality: decoded.header.incrementality ?? undefined,
+      incrementality: decoded.header.incrementality != null ? String(decoded.header.incrementality) : undefined,
       timestamp: toNumber(decoded.header.timestamp)
     },
     summary: { vehicles, tripUpdates, alerts },
@@ -77,6 +77,6 @@ export function encodeGtfsRt(parsed: ParsedFeed): ArrayBuffer {
   });
 
   const encoded = gtfs.FeedMessage.encode(feedMessage).finish();
-  return encoded.buffer;
+  return encoded.buffer as ArrayBuffer;
 }
 

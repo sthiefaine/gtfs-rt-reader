@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useFeedStore } from "../store/feedStore";
 import { useShallow } from "zustand/react/shallow";
 import { transit_realtime as gtfs } from "gtfs-realtime-bindings";
-import { encodeGtfsRt } from "@/lib/gtfs";
+import { encodeGtfsRt, ParsedFeed } from "@/lib/gtfs";
 
 const CAUSE_OPTIONS = [
   { value: 1, label: "Cause inconnue" },
@@ -40,11 +40,11 @@ function generateMockId(): string {
 }
 
 export default function MockPage() {
-  const [url, setUrl] = useState("https://app.pysae.com/api/v2/groups/moulins/gtfs-rt");
+  const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [modifiedEntities, setModifiedEntities] = useState<gtfs.IFeedEntity[]>([]);
-  const [originalParsed, setOriginalParsed] = useState<typeof parsed>(null);
+  const [originalParsed, setOriginalParsed] = useState<ParsedFeed | undefined>(undefined);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mockId, setMockId] = useState<string>("");
   const [newAlert, setNewAlert] = useState({
