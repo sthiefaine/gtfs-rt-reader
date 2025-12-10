@@ -90,8 +90,12 @@ export default function MockPage() {
 
     try {
       setLoading();
-      const res = await fetch(url, { cache: "no-cache" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+      const res = await fetch(proxyUrl, { cache: "no-cache" });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(errorData.error || `HTTP ${res.status}`);
+      }
       const buffer = await res.arrayBuffer();
       setFromBuffer(buffer, { type: "url", url });
     } catch (err) {

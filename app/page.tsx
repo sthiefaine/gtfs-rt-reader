@@ -65,12 +65,32 @@ export default function HomePage() {
   const handleFetch = async (url: string) => {
     try {
       setLoading();
-      const res = await fetch(url, { cache: "no-cache" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+      console.log(`[Client] Fetching via proxy: ${proxyUrl}`);
+      
+      const res = await fetch(proxyUrl, { cache: "no-cache" });
+      
+      if (!res.ok) {
+        let errorMessage = `HTTP ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorMessage;
+          if (errorData.details) {
+            console.error("[Client] Error details:", errorData.details);
+          }
+        } catch {
+          // Si ce n'est pas du JSON, utiliser le texte de la réponse
+          const text = await res.text().catch(() => "");
+          errorMessage = text || errorMessage;
+        }
+        throw new Error(errorMessage);
+      }
+      
       const buffer = await res.arrayBuffer();
+      console.log(`[Client] Success: received ${buffer.byteLength} bytes`);
       setFromBuffer(buffer, { type: "url", url });
     } catch (err) {
-      console.error("fetch error", err);
+      console.error("[Client] Fetch error:", err);
       const message =
         err instanceof Error ? err.message : "Impossible de récupérer le flux (URL ou réseau).";
       setError(message);

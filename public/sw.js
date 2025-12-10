@@ -21,6 +21,11 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
 
+  // Ne pas intercepter les requêtes API (proxy, mock, etc.)
+  if (request.url.includes("/api/")) {
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) =>
       cached ||
